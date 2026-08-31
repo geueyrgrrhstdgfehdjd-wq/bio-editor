@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: <%= bioMeta?.bg_style === 'dark' ? '#0a0a0f' : '#f0ebe5' %>;
+      color: <%= bioMeta?.bg_style === 'dark' ? '#f0f0f5' : '#1a1a1a' %>;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+      overflow: hidden;
+    }
+
+    #particles-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .bio-card {
+      position: relative;
+      z-index: 1;
+      background: <%= bioMeta?.bg_style === 'dark' ? 'rgba(20, 20, 35, 0.75)' : 'rgba(255, 255, 255, 0.8)' %>;
+      backdrop-filter: blur(20px) saturate(1.4);
+      -webkit-backdrop-filter: blur(20px) saturate(1.4);
+      border: 1px solid <%= bioMeta?.bg_style === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' %>;
+      border-radius: 2.5rem;
+      padding: 2.8rem 2.2rem;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 30px 80px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      transition: transform 0.1s ease, box-shadow 0.3s ease;
+      transform-style: preserve-3d;
+      perspective: 800px;
+      animation: fadeUp 0.8s ease-out both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .logo-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      perspective: 600px;
+    }
+
+    .logo-frame {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 140px;
+      height: 140px;
+      background: <%= bioMeta?.bg_style === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' %>;
+      border: 2.5px solid <%= bioMeta?.accent_color || '#e94560' %>;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform: translate(<%= bioMeta?.frame_x_offset || 0 %>px, <%= bioMeta?.frame_y_offset || 0 %>px) scale(<%= bioMeta?.frame_scale || 1.0 %>);
+      box-shadow: 0 0 30px rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, 0.15);
+      
+      <% if (bioMeta?.frame_style === 'circle') { %>
+        border-radius: 50%;
+      <% } else if (bioMeta?.frame_style === 'square-rounded') { %>
+        border-radius: 24%;
+      <% } else if (bioMeta?.frame_style === 'hexagon') { %>
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        border-radius: 0;
+        border: 3px solid <%= bioMeta?.accent_color || '#e94560' %>;
+      <% } else { %>
+        border-radius: 0;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+      <% } %>
+    }
+
+    .logo-frame:hover {
+      transform: translate(<%= bioMeta?.frame_x_offset || 0 %>px, <%= bioMeta?.frame_y_offset || 0 %>px) scale(<%= (bioMeta?.frame_scale || 1.0) * 1.05 %>);
+      box-shadow: 0 0 50px rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, 0.3);
+    }
+
+    .logo-frame .logo-emoji {
+      font-size: 4rem;
+      line-height: 1;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
+      transition: transform 0.3s ease;
+    }
+
+    .logo-frame:hover .logo-emoji {
+      transform: scale(1.08) rotate(-4deg);
+    }
+
+    .logo-text {
+      font-size: 2rem;
+      font-weight: 800;
+      text-align: center;
+      background: linear-gradient(135deg, <%= bioMeta?.accent_color || '#e94560' %>, <%= bioMeta?.theme_color || '#1a1a2e' %>);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.03em;
+      margin-top: 0.25rem;
+      text-shadow: 0 0 40px rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, 0.15);
+    }
+
+    .bio-description {
+      text-align: center;
+      font-size: 1rem;
+      opacity: 0.75;
+      margin: 0.5rem 0 1.8rem 0;
+      line-height: 1.7;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+    }
+
+    .link-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.9rem 1.4rem;
+      background: <%= bioMeta?.bg_style === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' %>;
+      border-radius: 1.2rem;
+      margin-bottom: 0.7rem;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 1px solid transparent;
+      transform-style: preserve-3d;
+      perspective: 400px;
+      backdrop-filter: blur(4px);
+    }
+
+    .link-item:hover {
+      background: <%= bioMeta?.bg_style === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' %>;
+      border-color: <%= bioMeta?.accent_color || '#e94560' %>;
+      transform: translateX(6px) scale(1.02);
+      box-shadow: 0 8px 30px -8px rgba(0,0,0,0.3);
+    }
+
+    .link-item .link-icon {
+      font-size: 1.5rem;
+      width: 2.4rem;
+      text-align: center;
+      flex-shrink: 0;
+      color: <%= bioMeta?.accent_color || '#e94560' %>;
+    }
+
+    .link-item .link-label {
+      font-size: 1rem;
+      font-weight: 500;
+      flex: 1;
+      letter-spacing: 0.01em;
+    }
+
+    .link-item .link-arrow {
+      opacity: 0.3;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .link-item:hover .link-arrow {
+      opacity: 1;
+      transform: translateX(4px);
+    }
+
+    .text-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 1.2rem;
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+      opacity: 0.85;
+      border-radius: 0.8rem;
+      transition: background 0.2s ease;
+    }
+
+    .text-item:hover {
+      background: <%= bioMeta?.bg_style === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' %>;
+    }
+
+    .text-item .text-icon {
+      font-size: 1.3rem;
+      width: 2rem;
+      text-align: center;
+      flex-shrink: 0;
+      color: <%= bioMeta?.accent_color || '#e94560' %>;
+    }
+
+    .divider {
+      height: 1px;
+      background: <%= bioMeta?.bg_style === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' %>;
+      margin: 1.2rem 0;
+      position: relative;
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 2px;
+      background: <%= bioMeta?.accent_color || '#e94560' %>;
+      border-radius: 10px;
+      opacity: 0.4;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 0.7rem;
+      opacity: 0.3;
+      margin-top: 1.8rem;
+      letter-spacing: 0.05em;
+      font-weight: 300;
+    }
+
+    .edit-badge {
+      display: inline-block;
+      background: <%= bioMeta?.accent_color || '#e94560' %>;
+      color: #fff;
+      font-size: 0.6rem;
+      padding: 0.15rem 0.8rem;
+      border-radius: 30px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 20px rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, 0.25);
+    }
+
+    .btn-dashboard {
+      display: inline-block;
+      background: <%= bioMeta?.accent_color || '#e94560' %>;
+      color: #fff;
+      padding: 0.6rem 1.8rem;
+      border-radius: 40px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 20px rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, 0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(8px);
+      letter-spacing: 0.02em;
+    }
+
+    .btn-dashboard:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 8px 40px rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, 0.4);
+    }
+
+    @media (max-width: 480px) {
+      .bio-card { padding: 2rem 1.2rem; border-radius: 2rem; }
+      .logo-frame { width: 110px; height: 110px; }
+      .logo-frame .logo-emoji { font-size: 3rem; }
+      .logo-text { font-size: 1.5rem; }
+      .link-item { padding: 0.7rem 1rem; }
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: <%= bioMeta?.accent_color || '#e94560' %>; border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+  <canvas id="particles-canvas"></canvas>
+
+  <div class="bio-card" id="bioCard">
+
+    <div class="logo-wrapper">
+      <div class="logo-frame">
+        <span class="logo-emoji"><%= bioMeta?.logo_emoji || '🧑' %></span>
+      </div>
+    </div>
+    
+    <div class="logo-text">
+      <%= bioMeta?.logo_text || bioUser?.display_name || bioUser?.username %>
+    </div>
+
+    <% if (bioMeta?.bio_description) { %>
+      <div class="bio-description"><%= bioMeta.bio_description %></div>
+    <% } %>
+
+    <% if (links && links.length > 0) { %>
+      <div class="divider"></div>
+      <% links.forEach(item => { %>
+        <a href="<%= item.value %>" target="_blank" class="link-item" title="<%= item.key %>">
+          <span class="link-icon"><i class="<%= item.icon || 'fa-solid fa-link' %>"></i></span>
+          <span class="link-label"><%= item.key %></span>
+          <span class="link-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+        </a>
+      <% }) %>
+    <% } %>
+
+    <% if (texts && texts.length > 0) { %>
+      <div class="divider"></div>
+      <% texts.forEach(item => { %>
+        <div class="text-item">
+          <span class="text-icon"><i class="<%= item.icon || 'fa-solid fa-pen' %>"></i></span>
+          <span><%= item.key %>: <strong><%= item.value %></strong></span>
+        </div>
+      <% }) %>
+    <% } %>
+
+    <% if (others && others.length > 0) { %>
+      <div class="divider"></div>
+      <% others.forEach(item => { %>
+        <div class="text-item">
+          <span class="text-icon"><i class="<%= item.icon || 'fa-solid fa-circle' %>"></i></span>
+          <span><%= item.key %>: <%= item.value %></span>
+        </div>
+      <% }) %>
+    <% } %>
+
+    <% if (user && user.id === bioUser?.id) { %>
+      <div style="margin-top: 1.8rem; text-align: center;">
+        <a href="/dashboard" class="btn-dashboard">
+          <i class="fa-solid fa-sliders-h" style="margin-right: 0.5rem;"></i> จัดการ Bio
+        </a>
+      </div>
+    <% } %>
+
+    <div class="footer-note">
+      <% if (user && user.id === bioUser?.id) { %>
+        <span class="edit-badge"><i class="fa-solid fa-lock" style="margin-right: 0.3rem;"></i> เจ้าของ</span>
+      <% } else { %>
+        <i class="fa-regular fa-copyright"></i> BluezyGPT
+      <% } %>
+    </div>
+  </div>
+
+  <script>
+    const card = document.getElementById('bioCard');
+    if (card) {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        const rotateX = y * -10;
+        const rotateY = x * 10;
+        card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      });
+    }
+
+    (function() {
+      const canvas = document.getElementById('particles-canvas');
+      const ctx = canvas.getContext('2d');
+      let w, h;
+      const particles = [];
+      const count = 80;
+
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      class Particle {
+        constructor() {
+          this.reset();
+        }
+        reset() {
+          this.x = Math.random() * w;
+          this.y = Math.random() * h;
+          this.z = Math.random() * 200 - 100;
+          this.size = Math.random() * 3 + 1.5;
+          this.speedX = (Math.random() - 0.5) * 0.25;
+          this.speedY = (Math.random() - 0.5) * 0.25;
+          this.opacity = Math.random() * 0.4 + 0.1;
+        }
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          if (this.x < 0 || this.x > w) { this.speedX *= -1; }
+          if (this.y < 0 || this.y > h) { this.speedY *= -1; }
+        }
+        draw() {
+          const perspective = 1 + this.z / 400;
+          const size = this.size * perspective;
+          const x = this.x + this.z * 0.02;
+          const y = this.y + this.z * 0.02;
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, ${this.opacity * perspective})`;
+          ctx.fill();
+          if (size > 2) {
+            ctx.shadowColor = `rgba(<%= bioMeta?.accent_color?.replace('#','') || '233,69,96' %>, 0.15)`;
+            ctx.shadowBlur = 20;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle());
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+          p.update();
+          p.draw();
+        });
+        requestAnimationFrame(animate);
+      }
+      animate();
+    })();
+  </script>
+</body>
+</html>
